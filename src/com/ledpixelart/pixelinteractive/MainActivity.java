@@ -200,6 +200,7 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
 	private int proxOutofRangeCounter = 0;
 	private String originalFileName;
 	private TextView proxTextView_;
+	private TextView proxRangeTextView_;
 	private int proxTimerInterval;
 	private int proxResetDelay;
 	
@@ -219,12 +220,12 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
 	      firstTimeSetupCounter_ = (TextView) findViewById(R.id.firstTimeSetupCounter);
 	      
 	      proxTextView_ = (TextView)findViewById(R.id.proxTextView);
+	      proxRangeTextView_ = (TextView)findViewById(R.id.proxRangeTextView);
 		 
 	      gifView = (GifView) findViewById(R.id.gifView);
 	      gifView.setGif(R.drawable.zzzblank);  //code will crash if a dummy gif is not loaded initially
 	   
 	      
-	     
         
         this.prefs = PreferenceManager.getDefaultSharedPreferences(this);
         
@@ -248,6 +249,7 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
         
         if (showProx_ == false) {
         	proxTextView_.setVisibility(View.GONE); 
+        	proxRangeTextView_.setVisibility(View.GONE); 
         }
         
         
@@ -264,14 +266,11 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
         connectTimer.start(); //this timer will pop up a message box if the device is not found
  		
  		context = getApplicationContext();
- 		
- 		
         
         if (android.os.Environment.getExternalStorageState().equals(android.os.Environment.MEDIA_MOUNTED)) {
 
             extStorageDirectory = Environment.getExternalStorageDirectory().toString();
 	           
-            	// File artdir = new File(basepath + "/Android/data/com.ioiomint./files");
             	File artdir = new File(basepath + "/pixel/pixelinteractive");
 	            if (!artdir.exists()) { //no directory so let's now start the one time setup
 	            	sdcardImages.setVisibility(View.INVISIBLE); //hide the images as they're not loaded so we can show a splash screen instead
@@ -286,11 +285,6 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
 	            else { //the directory was already there so no need to copy files or do a media re-scan so just continue on
 	            	continueOnCreate();
 	            }
-
-      //  } else if (android.os.Environment.getExternalStorageState().equals(android.os.Environment.MEDIA_MOUNTED_READ_ONLY)) {
-
-           // showToast("Sorry, your device does not have an accessible SD card, this app will not work");//Or use your own method ie: Toast
-      //  }
 	            
         } else  {
         	AlertDialog.Builder alert=new AlertDialog.Builder(this);
@@ -680,9 +674,14 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
 	        //showToast(aFileName2[0]);
 	        selectedFileName = aFileName2[0];	//now we have just the short name     
 	        
-	        gifView.setGif(imagePath);
-	        
+	     //   if (selectedFileName.contains("zzz"))
+	      //  {
+	        // showToast("Please select the other pair");
+	       // }
+	      //  else {	        
+	        gifView.setGif(imagePath);	        
 	        animateAfterDecode();
+	      //  }
 	        
 	       
     }
@@ -707,6 +706,7 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
 		 	File doubleFile = new File(DirPath + "/" + selectedFileName  + ".gif"); //pixelinteractive/rain.gif
 			if(doubleFile.exists()) { //the prox version of the animations exists so we're good
 		     animateAfterDecode();
+		 //    animateAfterDecodeInteractive();
 			}
 			else {  //it doesn't exist so let's tell the user
 				 Toast toast11 = Toast.makeText(context, selectedFileName + " does not exist", Toast.LENGTH_SHORT);
@@ -752,63 +752,83 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
      //now let's check if this file was already decoded by looking for the xml file
  	File decodedFile = new File(decodedDirPath + "/" + selectedFileName  + "/" + selectedFileName + ".txt"); //decoded/rain/rain.text
 		if(decodedFile.exists()) {
-	   		    // ok good, now let's read it, we need to get the total numbers of frames and the frame speed
-	   		  //File sdcard = Environment.getExternalStorageDirectory();
-	   	      //Get the text file
-	   	     // File file = new File(sdcard,"file.txt");
-	   	      //Read text from file
-	   	      StringBuilder text = new StringBuilder();
-	   	      String fileAttribs = null;
-	   	      
-	   	      try {
-	   	          BufferedReader br = new BufferedReader(new FileReader(decodedFile));
-	   	          String line;
-	   
-	   	          while ((line = br.readLine()) != null) {
-	   	              text.append(line);
-	   	              text.append('\n');	   	             
-	   	          }
-	   	      }
-	   	      catch (IOException e) {
-	   	          //You'll need to add proper error handling here
-	   			
-	   	      }
-	   	      
-	   	    fileAttribs = text.toString();  //now convert to a string	   	      
-	   	    String fdelim = "[,]"; //now parse this string considering the comma split  ie, 32,60
-	        String[] fileAttribs2 = fileAttribs.split(fdelim);
-	        selectedFileTotalFrames = Integer.parseInt(fileAttribs2[0].trim());
-	    	selectedFileDelay = Integer.parseInt(fileAttribs2[1].trim());
-	    	selectedFileResolution = Integer.parseInt(fileAttribs2[2].trim());
-	    	
-	    	//now we need to compare the current resoluiton with the encoded resolution
-	    	//if different, then we need to re-encode
-	    	
-	    	if (selectedFileResolution == currentResolution) {
-	    	
-			    	if (fps != 0) {  //then we're doing the FPS override which the user selected from settings
-			    		selectedFileDelay = 1000/fps;
-					}
+			
+	
+	
+	 
+		        	   // ok good, now let's read it, we need to get the total numbers of frames and the frame speed
+			   		  //File sdcard = Environment.getExternalStorageDirectory();
+			   	      //Get the text file
+			   	     // File file = new File(sdcard,"file.txt");
+			   	      //Read text from file
+			   	      StringBuilder text = new StringBuilder();
+			   	      String fileAttribs = null;
+			   	      
+			   	      try {
+			   	          BufferedReader br = new BufferedReader(new FileReader(decodedFile));
+			   	          String line;
+			   
+			   	          while ((line = br.readLine()) != null) {
+			   	              text.append(line);
+			   	              text.append('\n');	   	             
+			   	          }
+			   	      }
+			   	      catch (IOException e) {
+			   	          //You'll need to add proper error handling here
+			   			
+			   	      }
+			   	      
+			   	    fileAttribs = text.toString();  //now convert to a string	   	      
+			   	    String fdelim = "[,]"; //now parse this string considering the comma split  ie, 32,60
+			        String[] fileAttribs2 = fileAttribs.split(fdelim);
+			        selectedFileTotalFrames = Integer.parseInt(fileAttribs2[0].trim());
+			    	selectedFileDelay = Integer.parseInt(fileAttribs2[1].trim());
+			    	selectedFileResolution = Integer.parseInt(fileAttribs2[2].trim());
 			    	
-			    	if (selectedFileDelay == 0) {  //had to add this as some animated gifs have 0 delay which was causing a crash
-			    		selectedFileDelay = 10;
+			    	//now we need to compare the current resoluiton with the encoded resolution
+			    	//if different, then we need to re-encode
+			    	
+			    	if (selectedFileResolution == currentResolution) {
+			    	
+					    	//now let's make sure we got the right pair
+			    		
+			    		  if (selectedFileName.contains("zzz"))
+					        {
+					         Toast toast12 = Toast.makeText(context, "Please select the other pair", Toast.LENGTH_LONG);
+						     toast12.show();
+					        }
+						  
+					        else {
+					        	
+					        	if (fps != 0) {  //then we're doing the FPS override which the user selected from settings
+						    		selectedFileDelay = 1000/fps;
+								}
+						    	
+						    	if (selectedFileDelay == 0) {  //had to add this as some animated gifs have 0 delay which was causing a crash
+						    		selectedFileDelay = 10;
+						    	}
+						    	MainActivity myActivity = new MainActivity();  //had to add this due to some java requirement	    	
+								decodedtimer = myActivity.new DecodedTimer(300000,selectedFileDelay);
+								decodedtimer.start();
+								Playing = 1; //our isPlaying flag	
+					        }
+			    					    		        	
+				   	}
+			    	
+			    	
+			    	else {
+			    		Toast toast6 = Toast.makeText(context, "LED panel model was changed, decoding again...", Toast.LENGTH_LONG);
+				        toast6.show();
+				       
+				        ///************** let's show a message on PIXEL letting the user know we're decoding
+				        showDecoding();
+				        ///*********************************************************************************
+			    		gifView.play();
+			    		
 			    	}
-			    	MainActivity myActivity = new MainActivity();  //had to add this due to some java requirement	    	
-					decodedtimer = myActivity.new DecodedTimer(300000,selectedFileDelay);
-					decodedtimer.start();
-					Playing = 1; //our isPlaying flag	        	
-		   		}
-	    	else {
-	    		Toast toast6 = Toast.makeText(context, "LED panel model was changed, decoding again...", Toast.LENGTH_LONG);
-		        toast6.show();
+			    	
+				}	
 		       
-		        ///************** let's show a message on PIXEL letting the user know we're decoding
-		        showDecoding();
-		        ///*********************************************************************************
-	    		gifView.play();
-	    		
-	    	}
-		}	
 		
 		else { //then we need to decode the gif first	
 			Toast toast7 = Toast.makeText(context, "One time decode in process, just a moment...", Toast.LENGTH_SHORT);
@@ -976,6 +996,8 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
 	     matrix_model = Integer.valueOf(prefs.getString(   //the selected RGB LED Matrix Type
 	    	        resources.getString(R.string.selected_matrix),
 	    	        resources.getString(R.string.matrix_default_value))); 
+	     
+	     setProxRangeText("Proximity Trigger Range: Between " + proximityThresholdLower_ + " and " + proximityThresholdUpper_);
 	     
 	     if (matrix_model == 0 || matrix_model == 1) {
 	    	 currentResolution = 16;
@@ -1424,11 +1446,20 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
 		alert.setTitle(getResources().getString(R.string.notFoundString)).setIcon(R.drawable.icon).setMessage(getResources().getString(R.string.bluetoothPairingString)).setNeutralButton(getResources().getString(R.string.OKText), null).show();	
     }
     
-    private void setProxText(final String str) {
+    private void setProxText(final String str) {  
 		runOnUiThread(new Runnable() {
 			@Override
 			public void run() {
 				proxTextView_.setText(str);
+			}
+		});
+	}
+    
+    private void setProxRangeText(final String str) {  
+		runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				proxRangeTextView_.setText(str);
 			}
 		});
 	}

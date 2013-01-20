@@ -20,7 +20,17 @@
         android:text="Proximity Sensor: No Data"
         android:textColor="#DB2645"
         android:textSize="12sp" /> 
-
+        
+     <TextView
+        android:id="@+id/proxRangeTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center|center_vertical|left"
+        android:text=""
+        android:textColor="#DB2645"
+        android:textSize="12sp" /> 
+        
+    
     <!--
          <ImageView
         android:id="@+id/onetimesetupImageView"
