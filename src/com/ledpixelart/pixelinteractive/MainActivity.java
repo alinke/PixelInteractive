@@ -36,6 +36,7 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.SystemClock;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -106,7 +107,7 @@ import android.graphics.Bitmap.Config;
 import android.graphics.drawable.BitmapDrawable;
 import android.hardware.SensorManager;
 
-@SuppressLint("ParserError")
+@SuppressLint({ "ParserError", "ParserError" })
 public class MainActivity extends IOIOActivity implements OnItemClickListener  {
 
 	private static GifView gifView;
@@ -120,7 +121,7 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
 	
 	
     private static final String TAG = "PixelInteractive";	  	
-  	private static short[] frame_ = new short[512];
+  	private static short[] frame_;
   	public static final Bitmap.Config FAST_BITMAP_CONFIG = Bitmap.Config.RGB_565;
   	private static byte[] BitmapBytes;
   	private static InputStream BitmapInputStream;
@@ -203,11 +204,17 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
 	private TextView proxRangeTextView_;
 	private int proxTimerInterval;
 	private int proxResetDelay;
+	private static int decoding = 0;
+	private static int proxReady = 0;
+	private File sdCard;
 	
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		
+		//need to not trigger while decoding
+		//and don't trigger while do the one time setup
 		
 		requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
 		 setContentView(R.layout.main);
@@ -221,6 +228,8 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
 	      
 	      proxTextView_ = (TextView)findViewById(R.id.proxTextView);
 	      proxRangeTextView_ = (TextView)findViewById(R.id.proxRangeTextView);
+	      
+	      sdCard = Environment.getExternalStorageDirectory();
 		 
 	      gifView = (GifView) findViewById(R.id.gifView);
 	      gifView.setGif(R.drawable.zzzblank);  //code will crash if a dummy gif is not loaded initially
@@ -272,14 +281,30 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
             extStorageDirectory = Environment.getExternalStorageDirectory().toString();
 	           
             	File artdir = new File(basepath + "/pixel/pixelinteractive");
+            	
 	            if (!artdir.exists()) { //no directory so let's now start the one time setup
+	            	//showToast("One Time Setup... Please Wait...");
+	            	File decodeddir = new File(basepath + "/pixel/pixelinteractive/decoded");
+	            	decoding = 1;
 	            	sdcardImages.setVisibility(View.INVISIBLE); //hide the images as they're not loaded so we can show a splash screen instead
 	            	//showToast(getResources().getString(R.string.oneTimeSetupString)); //replaced by direct text on view screen
-	            	artdir.mkdirs();
-	                copyArt(); 
-	                countdownCounter = (countdownDuration - 2);
-	                mediascanTimer = new MediaScanTimer(countdownDuration*1000,1000); //pop up a message if it's not connected by this timer
- 		            mediascanTimer.start(); //we need a delay here to give the me
+	            	//showToast("One Time Setup... Please Wait...");
+            	    //countdownCounter = (countdownDuration - 2);
+	               // mediascanTimer = new MediaScanTimer(countdownDuration*1000,1000); //pop up a message if it's not connected by this timer
+ 		           // mediascanTimer.start(); //we need a delay here to give the me
+	            	
+	               // copyArt(); //copy the .gif files
+	                //copyFileOrDir("pixelinteractive/decoded"); //this worked and was able to copy everything in the decoded dir and all sub-dirs too but took too long
+	                
+	            	new copyFilesAsync().execute();
+	            	
+	            
+	                
+	               
+	              
+	              // countdownCounter = (countdownDuration - 2);
+	              // mediascanTimer = new MediaScanTimer(countdownDuration*1000,1000); //pop up a message if it's not connected by this timer
+ 		          // mediascanTimer.start(); //we need a delay here to give the me
 	               
 	            }
 	            else { //the directory was already there so no need to copy files or do a media re-scan so just continue on
@@ -295,23 +320,219 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
         
 	}
 	
-	 private void MediaScanCompleted() {
-         
-	    	continueOnCreate();
-	    }
+	 private class copyFilesAsync extends AsyncTask<Void, Integer, Void>{
+		 
+	     int progress_status;
+	      
+	     @Override
+	  protected void onPreExecute() {
+	   // update the UI immediately after the task is executed
+	   super.onPreExecute();
 	    
-    private void continueOnCreate() {
-    	 firstTimeSetup1_.setVisibility(View.GONE);
-	     firstTimeSetup2_.setVisibility(View.GONE);
-	     firstTimeInstructions_.setVisibility(View.GONE);
-	     firstTimeSetupCounter_.setVisibility(View.GONE);
-    	 sdcardImages.setVisibility(View.VISIBLE);
-    	 setupViews();
-         setProgressBarIndeterminateVisibility(true); 
-         loadImages();
-    }
+	 //   Toast.makeText(AsyncTaskActivity.this,
+	            //"Invoke onPreExecute()", Toast.LENGTH_SHORT).show();
+	 
+	    progress_status = 0;
+	  //  txt_percentage.setText("downloading 0%");
+	    firstTimeSetupCounter_.setText("0%");
 	    
-	   // @SuppressLint("NewApi")
+	  }
+	      
+	  @Override
+	  protected Void doInBackground(Void... params) {
+		  	
+			File artdir = new File(basepath + "/pixel/pixelinteractive");
+			artdir.mkdirs();			
+			SystemClock.sleep(100);
+            File decodeddir = new File(basepath + "/pixel/pixelinteractive/decoded");
+		  	decodeddir.mkdirs();
+			SystemClock.sleep(100);
+		  	copyArt(); //copy the .gif files
+			SystemClock.sleep(100);
+			
+			copyDecodedThread("bomb");
+			progress_status += 2;
+		    publishProgress(progress_status);
+		    
+        	copyDecodedThread("cat");
+        	progress_status += 4;
+		    publishProgress(progress_status);
+		    
+		    copyDecodedThread("eye");
+        	progress_status += 2;
+		    publishProgress(progress_status);
+		    
+        	copyDecodedThread("face");
+        	progress_status += 4;
+		    publishProgress(progress_status);
+		    
+        	copyDecodedThread("fighter");
+        	progress_status += 4;
+		    publishProgress(progress_status);
+		    
+        	copyDecodedThread("fish");
+        	progress_status += 2;
+		    publishProgress(progress_status);
+		    
+        	copyDecodedThread("girl");
+        	progress_status += 4;
+		    publishProgress(progress_status);
+		    
+		    copyDecodedThread("hand");
+        	progress_status += 2;
+		    publishProgress(progress_status);
+		    
+            copyDecodedThread("heart");
+            progress_status += 4;
+		    publishProgress(progress_status);
+		    
+		    copyDecodedThread("lantern");
+            progress_status += 4;
+		    publishProgress(progress_status);
+		    
+            copyDecodedThread("rain");
+            progress_status += 4;            
+		    publishProgress(progress_status);
+		    
+            copyDecodedThread("redrum");
+            progress_status += 4;
+		    publishProgress(progress_status);
+		    
+            copyDecodedThread("tree");
+            progress_status += 4;
+		    publishProgress(progress_status);
+		    
+            copyDecodedThread("zombie");
+            progress_status += 4;
+		    publishProgress(progress_status);
+		    
+            copyDecodedThread("zzzbomb");
+            progress_status += 4;
+		    publishProgress(progress_status);
+		    
+            copyDecodedThread("zzzcat");
+            progress_status += 4;
+		    publishProgress(progress_status);
+		    
+		    copyDecodedThread("zzzeye");
+            progress_status += 4;
+		    publishProgress(progress_status);
+		    
+		    copyDecodedThread("zzzface");
+            progress_status += 4;
+		    publishProgress(progress_status);
+		    
+		    copyDecodedThread("zzzfighter");
+            progress_status += 4;
+		    publishProgress(progress_status);
+		    
+            copyDecodedThread("zzzfish");
+            progress_status += 4;
+		    publishProgress(progress_status);
+		    
+            copyDecodedThread("zzzgirl");
+            progress_status += 4;
+		    publishProgress(progress_status);
+		    
+            copyDecodedThread("zzzhand");
+            progress_status += 4;
+		    publishProgress(progress_status);
+		    
+            copyDecodedThread("zzzheart");
+            progress_status += 4;
+		    publishProgress(progress_status);
+		    
+		    copyDecodedThread("zzzlantern");
+            progress_status += 4;
+		    publishProgress(progress_status);
+		    
+            copyDecodedThread("zzzrain");
+            progress_status += 4;
+		    publishProgress(progress_status);
+		    
+            copyDecodedThread("zzzredrum");
+            progress_status += 4;
+		    publishProgress(progress_status);
+		    
+            copyDecodedThread("zzztree");
+            progress_status += 4;
+		    publishProgress(progress_status);
+		    
+            copyDecodedThread("zzzzombie");
+            progress_status += 4;
+		    publishProgress(progress_status);
+		  
+		  
+			//  while(progress_status<100){
+		     
+		   // progress_status += 2;
+		     
+		   // publishProgress(progress_status);
+		   // SystemClock.sleep(300);
+		     
+		  // }
+		    
+	   return null;
+	  }
+	  
+	  @Override
+	  protected void onProgressUpdate(Integer... values) {
+	   super.onProgressUpdate(values);
+	    
+	  // progressBar.setProgress(values[0]);
+	   firstTimeSetupCounter_.setText(values[0]+"%");
+	  // firstTimeSetupCounter_.setText("0%");
+	    
+	  }
+	   
+	  @Override
+	  protected void onPostExecute(Void result) {
+	   super.onPostExecute(result);
+	   continueOnCreate();
+   		decoding = 0; 
+	   // Toast.makeText(AsyncTaskActivity.this,
+	           // "Invoke onPostExecute()", Toast.LENGTH_SHORT).show();
+	     
+	   firstTimeSetupCounter_.setText("Complete");
+	   // btn_start.setEnabled(true);
+	  }
+	  
+	  private void copyDecodedThread(final String decodedDir) {  
+			
+					AssetManager assetManager = getResources().getAssets();
+			        String[] files = null;
+			        try {
+			            files = assetManager.list("pixelinteractive/decoded/" + decodedDir);
+			        } catch (Exception e) {
+			            Log.e("read clipart ERROR", e.toString());
+			            e.printStackTrace();
+			        }
+			        
+			        File dir = new File(basepath + "/pixel/pixelinteractive/decoded/" + decodedDir);
+	                if (!dir.exists())
+	                    dir.mkdir();
+	                
+			        for(int i=0; i<files.length; i++) {
+			            InputStream in = null;
+			            OutputStream out = null;
+			            try {
+			              in = assetManager.open("pixelinteractive/decoded/" + decodedDir + "/" + files[i]);
+			              out = new FileOutputStream(basepath + "/pixel/pixelinteractive/decoded/" + decodedDir + "/" + files[i]);
+			              copyFile(in, out);
+			              in.close();
+			              in = null;
+			              out.flush();
+			              out.close();
+			              out = null;   
+			           
+			            } catch(Exception e) {
+			                Log.e("copy clipart ERROR", e.toString());
+			                e.printStackTrace();
+			            }       
+			        }
+				
+		}
+	  
 		@SuppressLint("NewApi")
 		private void copyArt() {
 	    	
@@ -354,14 +575,182 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
 	        }
 	        
 	    }
-	    
-	    private void copyFile(InputStream in, OutputStream out) throws IOException {
-	        byte[] buffer = new byte[1024];
-	        int read;
-	        while((read = in.read(buffer)) != -1){
-	          out.write(buffer, 0, read);
-	        }
+	  
+	  
+	  
+}
+	
+	
+	
+	 private void MediaScanCompleted() {
+         
+	    	continueOnCreate();
+	    	decoding = 0;
 	    }
+	    
+    private void continueOnCreate() {
+    	 firstTimeSetup1_.setVisibility(View.GONE);
+	     firstTimeSetup2_.setVisibility(View.GONE);
+	     firstTimeInstructions_.setVisibility(View.GONE);
+	     firstTimeSetupCounter_.setVisibility(View.GONE);
+    	 sdcardImages.setVisibility(View.VISIBLE);
+    	 setupViews();
+         setProgressBarIndeterminateVisibility(true); 
+         loadImages();
+    }
+	    
+	  
+	
+		
+	private void copyDecoded(String decodedDir) {
+		    	
+		    	AssetManager assetManager = getResources().getAssets();
+		        String[] files = null;
+		        try {
+		            files = assetManager.list("pixelinteractive/decoded/" + decodedDir);
+		        } catch (Exception e) {
+		            Log.e("read clipart ERROR", e.toString());
+		            e.printStackTrace();
+		        }
+		        
+		        File dir = new File(basepath + "/pixel/pixelinteractive/decoded/" + decodedDir);
+                if (!dir.exists())
+                    dir.mkdir();
+                
+		        for(int i=0; i<files.length; i++) {
+		            InputStream in = null;
+		            OutputStream out = null;
+		            try {
+		              in = assetManager.open("pixelinteractive/decoded/" + decodedDir + "/" + files[i]);
+		              out = new FileOutputStream(basepath + "/pixel/pixelinteractive/decoded/" + decodedDir + "/" + files[i]);
+		              copyFile(in, out);
+		              in.close();
+		              in = null;
+		              out.flush();
+		              out.close();
+		              out = null;   
+		           
+		            } catch(Exception e) {
+		                Log.e("copy clipart ERROR", e.toString());
+		                e.printStackTrace();
+		            }       
+		        }
+		        
+		    }
+	    
+    private void copyFile(InputStream in, OutputStream out) throws IOException {
+        byte[] buffer = new byte[1024];
+        int read;
+        while((read = in.read(buffer)) != -1){
+          out.write(buffer, 0, read);
+        }
+    }
+    
+    private void copyFileOrDirBad(String path) {  //path = pixelinteractive/decoded
+        AssetManager assetManager = this.getAssets();
+        String assets[] = null;
+        try {
+            assets = assetManager.list(path);
+            if (assets.length == 0) {
+                copyFile3(path);
+            } else {
+                File dir = new File (sdCard.getAbsolutePath() + "/pixel/pixelinteractive/decoded/");
+                //String fullPath = "/data/data/" + this.getPackageName() + "/" + path;//path for storing internally to data/data
+                //File dir = new File(fullPath);
+                if (!dir.exists()){
+                    System.out.println("Created directory"+sdCard.getAbsolutePath() + "/pixel/pixelinteractive/decoded/");
+                    boolean result = dir.mkdir();
+                    System.out.println("Result of directory creation"+result);
+                }
+
+                for (int i = 0; i < assets.length; ++i) {
+                    //copyFileOrDir(path + "/" + assets[i]);
+                    copyFileOrDirBad("/pixel/pixelinteractive/decoded/" + assets[i]);
+                }
+            }
+        } catch (IOException ex) {
+            System.out.println("Exception in copyFileOrDir"+ex);
+        }
+    }
+
+    private void copyFile3(String filename) {
+        AssetManager assetManager = this.getAssets();
+
+        InputStream in = null;
+        OutputStream out = null;
+        try {
+            in = assetManager.open(filename);
+            //String newFileName = "/data/data/" + this.getPackageName() + "/" + filename;//path for storing internally to data/data
+            String newFileName = sdCard.getAbsolutePath() + "/pixel/pixelinteractive/decoded/" + filename;
+            out = new FileOutputStream(newFileName);
+            byte[] buffer = new byte[1024];
+            int read;
+            while ((read = in.read(buffer)) != -1) {
+                out.write(buffer, 0, read);
+            }
+            in.close();
+            in = null;
+            out.flush();
+            out.close();
+            out = null;
+        } catch (Exception e) {
+            System.out.println("Exception in copyFile"+e);
+        }
+
+    }
+    
+    private void copyFileOrDir(String path) {  //path = pixelinteractive/decoded/Fighter
+        AssetManager assetManager = this.getAssets();
+        String assets[] = null;
+        try {
+            assets = assetManager.list(path);
+            if (assets.length == 0) {
+                copyFile2(path);
+            } else {
+               // String fullPath = "/data/data/" + this.getPackageName() + "/" + path;
+                String fullPath = basepath + "/pixel/" + path;  //path = pixelinteractive/decoded/fighter so pixel/pixelinteractive/decoded/fighter
+                File dir = new File(fullPath);
+                if (!dir.exists())
+                    dir.mkdir();
+                for (int i = 0; i < assets.length; ++i) {
+                    //copyFileOrDir(path + "/" + assets[i]);
+                    copyFileOrDir(path + "/" + assets[i]);
+                }
+            }
+        } catch (IOException ex) {
+            Log.e("tag", "I/O Exception", ex);
+        }
+    }
+    
+    private void copyFile2(String filename) {
+        AssetManager assetManager = this.getAssets();
+
+        InputStream in = null;
+        OutputStream out = null;
+        try {
+            in = assetManager.open(filename);
+            //String newFileName = "/data/data/" + this.getPackageName() + "/" + filename;
+           //String newFileName = basepath + "/pixel/pixelinteractive" + filename;
+            String newFileName = basepath + "/pixel/" + filename;
+            
+            
+            out = new FileOutputStream(newFileName);
+
+            byte[] buffer = new byte[1024];
+            int read;
+            while ((read = in.read(buffer)) != -1) {
+                out.write(buffer, 0, read);
+            }
+            in.close();
+            in = null;
+            out.flush();
+            out.close();
+            out = null;
+        } catch (Exception e) {
+            Log.e("tag", e.getMessage());
+        }
+
+    }
 	
 	private static void loadRGB565() {
 	 	   
@@ -401,7 +790,7 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
         }
         
         connectTimer.cancel();  //if user closes the program, need to kill this timer or we'll get a crash
-        decodedtimer.cancel();
+        //decodedtimer.cancel();
         proxtimer.cancel();
         proxviddelay.cancel();
      //   ioio_.disconnect();
@@ -674,14 +1063,16 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
 	        //showToast(aFileName2[0]);
 	        selectedFileName = aFileName2[0];	//now we have just the short name     
 	        
-	     //   if (selectedFileName.contains("zzz"))
-	      //  {
-	        // showToast("Please select the other pair");
-	       // }
-	      //  else {	        
-	        gifView.setGif(imagePath);	        
-	        animateAfterDecode();
-	      //  }
+	        if (selectedFileName.contains("zzz"))
+	        {
+	        	showToast("Please select the other pair");
+	        	gifView.setGif(imagePath);	  
+	        	correctVideo(0);
+	        }
+	        else {	        
+		        gifView.setGif(imagePath);	        
+		        correctVideo(1);
+	        }
 	        
 	       
     }
@@ -701,15 +1092,21 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
 	     	 originalFileName = selectedFileName;
 		     selectedFileName = "zzz" + selectedFileName;  
 		    // Toast toast9 = Toast.makeText(context, selectedFileName, Toast.LENGTH_SHORT);
-		     //toast9.show();
+		    // toast9.show();
+		   //now let's check that the decoding is done for the pair we want 
+		   File decodeDirCheck = new File(decodedDirPath + "/" + selectedFileName + "/" + selectedFileName + ".txt");  //decoded/zzzrain/zzzrain.txt						       
+		  // Toast toast111 = Toast.makeText(context, decodedDirPath + "/" + selectedFileName + "/" + selectedFileName + ".txt", Toast.LENGTH_SHORT);
+		  // toast111.show();
 		     
-		 	File doubleFile = new File(DirPath + "/" + selectedFileName  + ".gif"); //pixelinteractive/rain.gif
-			if(doubleFile.exists()) { //the prox version of the animations exists so we're good
-		     animateAfterDecode();
+		 //	File doubleFile = new File(DirPath + "/" + selectedFileName  + ".gif"); //pixelinteractive/rain.gif  //here let's jusk check for the decoded dir
+			if(decodeDirCheck.exists()) { //the prox version of the animations exists so we're good
+				//correctVideo(1); //plays the video
+				playPairVideo();
+				//animateAfterDecode();
 		 //    animateAfterDecodeInteractive();
 			}
 			else {  //it doesn't exist so let's tell the user
-				 Toast toast11 = Toast.makeText(context, selectedFileName + " does not exist", Toast.LENGTH_SHORT);
+				 Toast toast11 = Toast.makeText(context, selectedFileName + " does not exist, you'll need to add this as the interactive animation pair", Toast.LENGTH_SHORT);
 			     toast11.show();
 			}
 			
@@ -734,7 +1131,9 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
 		     //toast10.show();
 		     //also later need to check if this file even exists, we can add that later
 		     
-		     animateAfterDecode();
+		    // animateAfterDecode();
+		     playPairVideo();
+		     //correctVideo(1);
 	 // }
 }
   
@@ -792,13 +1191,13 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
 			    	
 					    	//now let's make sure we got the right pair
 			    		
-			    		  if (selectedFileName.contains("zzz"))
-					        {
-					         Toast toast12 = Toast.makeText(context, "Please select the other pair", Toast.LENGTH_LONG);
-						     toast12.show();
-					        }
+			    		//  if (selectedFileName.contains("zzz"))
+					     //   {
+					       //  Toast toast12 = Toast.makeText(context, "Please select the other pair", Toast.LENGTH_LONG);
+						  //   toast12.show();
+					      //  }
 						  
-					        else {
+					      //  else {
 					        	
 					        	if (fps != 0) {  //then we're doing the FPS override which the user selected from settings
 						    		selectedFileDelay = 1000/fps;
@@ -811,7 +1210,7 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
 								decodedtimer = myActivity.new DecodedTimer(300000,selectedFileDelay);
 								decodedtimer.start();
 								Playing = 1; //our isPlaying flag	
-					        }
+					      //  }
 			    					    		        	
 				   	}
 			    	
@@ -819,7 +1218,7 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
 			    	else {
 			    		Toast toast6 = Toast.makeText(context, "LED panel model was changed, decoding again...", Toast.LENGTH_LONG);
 				        toast6.show();
-				       
+				        decoding = 1;
 				        ///************** let's show a message on PIXEL letting the user know we're decoding
 				        showDecoding();
 				        ///*********************************************************************************
@@ -837,6 +1236,191 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
 			gifView.play();
 		}
   }
+  
+public static void correctVideo(int rightVideo) {
+	  
+	  //********we need to reset everything because the user could have been already running an animation
+	     x = 0;
+	     
+	     if (Playing == 1) {
+	    	 decodedtimer.cancel();
+	    	// is.close();
+	     }
+	     ///****************************
+     
+     //now let's check if this file was already decoded by looking for the xml file
+ 	File decodedFile = new File(decodedDirPath + "/" + selectedFileName  + "/" + selectedFileName + ".txt"); //decoded/rain/rain.text
+		if(decodedFile.exists()) {  // ok good, it's decoded, so let's read it, we need to get the total numbers of frames and the frame speed
+			   		  //File sdcard = Environment.getExternalStorageDirectory();
+			   	      //Get the text file
+			   	     // File file = new File(sdcard,"file.txt");
+			   	      //Read text from file
+			   	      StringBuilder text = new StringBuilder();
+			   	      String fileAttribs = null;
+			   	      
+			   	      try {
+			   	          BufferedReader br = new BufferedReader(new FileReader(decodedFile));
+			   	          String line;
+			   
+			   	          while ((line = br.readLine()) != null) {
+			   	              text.append(line);
+			   	              text.append('\n');	   	             
+			   	          }
+			   	      }
+			   	      catch (IOException e) {
+			   	          //You'll need to add proper error handling here
+			   			
+			   	      }
+			   	      
+			   	    fileAttribs = text.toString();  //now convert to a string	   	      
+			   	    String fdelim = "[,]"; //now parse this string considering the comma split  ie, 32,60
+			        String[] fileAttribs2 = fileAttribs.split(fdelim);
+			        selectedFileTotalFrames = Integer.parseInt(fileAttribs2[0].trim());
+			    	selectedFileDelay = Integer.parseInt(fileAttribs2[1].trim());
+			    	selectedFileResolution = Integer.parseInt(fileAttribs2[2].trim());
+			    	
+			    	//now we need to compare the current resoluiton with the encoded resolution
+			    	//if different, then we need to re-encode
+			    	
+			    	if (selectedFileResolution == currentResolution) {
+			    	
+			    		
+					    	if (rightVideo == 1)  {   	
+						    		
+						    		if (fps != 0) {  //then we're doing the FPS override which the user selected from settings
+									    selectedFileDelay = 1000/fps;
+									}
+									    	
+							    	if (selectedFileDelay == 0) {  //had to add this as some animated gifs have 0 delay which was causing a crash
+							    		selectedFileDelay = 10;
+							    	}
+							    	///************ Now let's play! *******************************
+							    	MainActivity myActivity = new MainActivity();  //had to add this due to some java requirement	    	
+									decodedtimer = myActivity.new DecodedTimer(300000,selectedFileDelay);
+									decodedtimer.start();
+									Playing = 1; //our isPlaying flag	
+									proxReady = 1; 		        	
+							}
+			    			
+				    		
+					    	else {
+					    		 Toast toast12 = Toast.makeText(context, "Please select the other pair", Toast.LENGTH_SHORT);
+							     toast12.show();
+					    	}
+							    
+			    	}
+			    	else {
+			    		Toast toast6 = Toast.makeText(context, "LED panel model was changed, decoding again...", Toast.LENGTH_LONG);
+				        toast6.show();
+				        decoding = 1;
+				        ///************** let's show a message on PIXEL letting the user know we're decoding
+				        showDecoding(); //display on the matrix
+				        ///*********************************************************************************
+			    		gifView.play();  //decoding routine
+			    		
+			    	}
+			    	
+		}	
+		       
+		
+		else { //then we need to decode the gif first	
+			Toast toast7 = Toast.makeText(context,  "One time decode in process for file: '" + selectedFileName + "', just a moment...", Toast.LENGTH_LONG);
+	        toast7.show();
+	        
+	        decoding = 1;
+	        showDecoding(); //display that we're decoding to the matrix
+			gifView.play(); //decoding routine
+		}
+  }
+
+public static void playPairVideo() {
+	  
+	  //********we need to reset everything because the user could have been already running an animation
+	     x = 0;
+	     
+	     if (Playing == 1) {
+	    	 decodedtimer.cancel();
+	    	// is.close();
+	     }
+	     ///****************************
+	     
+	     int rightVideo = 1;
+	     //we've already checked that the decode dir exists so we don't need to check that again
+   
+   //now let's check if this file was already decoded by looking for the xml file
+	File decodedFile = new File(decodedDirPath + "/" + selectedFileName  + "/" + selectedFileName + ".txt"); //decoded/zzzrain/zzzrain.text
+		//if(decodedFile.exists()) {  // ok good, it's decoded, so let's read it, we need to get the total numbers of frames and the frame speed
+			   		  //File sdcard = Environment.getExternalStorageDirectory();
+			   	      //Get the text file
+			   	     // File file = new File(sdcard,"file.txt");
+			   	      //Read text from file
+			   	      StringBuilder text = new StringBuilder();
+			   	      String fileAttribs = null;
+			   	      
+			   	      try {
+			   	          BufferedReader br = new BufferedReader(new FileReader(decodedFile));
+			   	          String line;
+			   
+			   	          while ((line = br.readLine()) != null) {
+			   	              text.append(line);
+			   	              text.append('\n');	   	             
+			   	          }
+			   	      }
+			   	      catch (IOException e) {
+			   	          //You'll need to add proper error handling here
+			   			
+			   	      }
+			   	      
+			   	    fileAttribs = text.toString();  //now convert to a string	   	      
+			   	    String fdelim = "[,]"; //now parse this string considering the comma split  ie, 32,60
+			        String[] fileAttribs2 = fileAttribs.split(fdelim);
+			        selectedFileTotalFrames = Integer.parseInt(fileAttribs2[0].trim());
+			    	selectedFileDelay = Integer.parseInt(fileAttribs2[1].trim());
+			    	selectedFileResolution = Integer.parseInt(fileAttribs2[2].trim());
+			    	
+			    	//now we need to compare the current resoluiton with the encoded resolution
+			    	//if different, then we need to re-encode
+			    	
+			    	if (selectedFileResolution == currentResolution) {
+						    		
+						    		if (fps != 0) {  //then we're doing the FPS override which the user selected from settings
+									    selectedFileDelay = 1000/fps;
+									}
+									    	
+							    	if (selectedFileDelay == 0) {  //had to add this as some animated gifs have 0 delay which was causing a crash
+							    		selectedFileDelay = 10;
+							    	}
+							    	///************ Now let's play! *******************************
+							    	MainActivity myActivity = new MainActivity();  //had to add this due to some java requirement	    	
+									decodedtimer = myActivity.new DecodedTimer(300000,selectedFileDelay);
+									decodedtimer.start();
+									Playing = 1; //our isPlaying flag	
+									proxReady = 1; 		        	
+						
+							    
+			    	}
+			    	else {
+						    		Toast toast6 = Toast.makeText(context, "LED panel model was changed, decoding again...", Toast.LENGTH_LONG);
+							        toast6.show();
+							        decoding = 1;
+							        ///************** let's show a message on PIXEL letting the user know we're decoding
+							        showDecoding(); //display on the matrix
+							        ///*********************************************************************************
+						    		gifView.play();  //decoding routine
+			    		
+			    	}
+			    	
+	
+		       
+		
+		//else { //then we need to decode the gif first	
+			//Toast toast7 = Toast.makeText(context, "One time decode in process, just a moment...", Toast.LENGTH_SHORT);
+	       // toast7.show();
+	       // decoding = 1;
+	       // showDecoding(); //display that we're decoding to the matrix
+			//gifView.play(); //decoding routine
+		//}
+}
   
    
 	private static void showDecoding()  {
@@ -1237,15 +1821,15 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
 	  		
 	  		//showToastShort("Proximity Sensor: " + proxValue);
 	  		
-	  		if ((proxOn_ == true) && (Playing == 1 ) && (proxValue >= proximityThresholdLower_) && (proxValue <= proximityThresholdUpper_) && (proxTriggeredFlag == 0)) { //we're in range so let's trigger
+	  		if ((proxOn_ == true) && (proxReady == 1 ) && (proxValue >= proximityThresholdLower_) && (proxValue <= proximityThresholdUpper_) && (proxTriggeredFlag == 0)  && (decoding == 0)) { //we're in range so let's trigger
 	  				proxTriggeredFlag = 1;
 	  				
-	  				//if (proxResetDelay != 0) {
+	  				if (proxResetDelay != 0) {
 	  					proxviddelay.start();  //we need this timer so the prox video plays for a guaranteed amount of time
-	  				//}
-	  				//else {
-	  					//proxVid2Playing = 1;
-	  				//}
+	  				}
+	  				else {
+	  					proxVid2Playing = 1;
+	  				}
 	  				
 	  				proxInteractive(); //let's now play the triggered prox animation
 	  		}
@@ -1736,7 +2320,21 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
 							   //Toast toast1 = Toast.makeText(context, "One Time Decode Finished", Toast.LENGTH_LONG);
 						      // toast1.show();	
 						       gifView.stop();
-						       animateAfterDecode();
+						       decoding = 0; //we're done decoding to reset flag
+						       //*****************************************************
+							   //we're done decoding and we've written our file so let's animate!
+						       //here let's check if we have the correct file or the wrong file
+						       if (selectedFileName.contains("zzz")) {
+								     //   {
+								         Toast toast12 = Toast.makeText(context, "Decoding complete, please select the other pair to start the interactive animations", Toast.LENGTH_LONG);
+									     toast12.show();
+								      //  }
+						       }
+						       else {
+						    	   		correctVideo(1);
+						       }
+						       //animateAfterDecode();
+						      
 				     			
 				     		} catch (IOException e) {
 				     			e.printStackTrace();
@@ -1748,8 +2346,7 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
 						        toast2.show();	
 					     	}
 				   		}
-				   	   //*****************************************************
-				   	  //we're done decoding and we've written our file so let's animate!
+				   	
 				   		 
 						   		
 						}

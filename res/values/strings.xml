@@ -7,7 +7,7 @@
     <string name="menu_about_summary">http://ledpixelart.html\n\nDesigned by Open Gadgets LLC</string>
     <string name="versionString">Version</string> 
     
-   <string name="oneTimeSetupString">One Time Setup: Copying stock animations to your SD card.</string> 
+   <string name="oneTimeSetupString">One Time Setup: Copying interactive animations to your SD card.</string> 
    <string name="bluetoothPairingString">Please ensure Bluetooth pairing has been completed prior. The Bluetooth pairing code is: 4545."</string> 
     
    
@@ -98,12 +98,12 @@
   
     <string name="proximityThresholdLower">Prox Threshold Lower</string>    
     <string name="pref_proxThresholdLower">pref_proxThreshold</string>
-    <string name="proximityThresholdLowerDefault">150</string>
+    <string name="proximityThresholdLowerDefault">400</string>
     <string name="proximityThresholdLowerSummary">An image will display when the proximity sensor value falls between the lower and upper thresholds</string>
     
      <string name="proximityThresholdUpper">Prox Threshold Upper</string>    
     <string name="pref_proxThresholdUpper">pref_proxThresholdUpper</string>
-    <string name="proximityThresholdUpperDefault">180</string>
+    <string name="proximityThresholdUpperDefault">500</string>
     <string name="proximityThresholdUpperSummary">An image will display when the proximity sensor value falls between the lower and upper thresholds</string>
     
     <string name="proximityPin">Proximity Pin</string>    
