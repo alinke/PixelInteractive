@@ -1795,7 +1795,14 @@ public static void playPairVideo() {
 	    {
 	    	 SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);     
 	    	 setPreferences();
-	 }
+	    }
+	    
+	    protected void onResume() {
+	         super.onResume();
+	         
+	         this.prefs = PreferenceManager.getDefaultSharedPreferences(this);
+	         updatePrefs();
+	     }
 	
 	
     
