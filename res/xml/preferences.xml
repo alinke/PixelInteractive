@@ -27,7 +27,11 @@
     android:defaultValue="@string/pref_noSleepDefault"
     android:summary="@string/noSleepSummary"/>
     
-    
+     <CheckBoxPreference
+    android:title="@string/AutoSelectPanel"
+    android:key="pref_AutoSelectPanel"
+    android:defaultValue="@string/pref_AutoSelectPanelDefault"
+    android:summary="@string/AutoSelectPanelSummary"/>
     
       <!-- <CheckBoxPreference
     android:title="Call Taxi"

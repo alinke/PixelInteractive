@@ -24,8 +24,6 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.LinearLayout.LayoutParams;
-
-
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -41,15 +39,15 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.nio.ShortBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-
 import ioio.lib.api.AnalogInput;
+import ioio.lib.api.IOIO.VersionType;
 import ioio.lib.api.exception.ConnectionLostException;
 import ioio.lib.util.BaseIOIOLooper;
 import ioio.lib.util.IOIOLooper;
@@ -207,6 +205,15 @@ public class MainActivity extends IOIOActivity implements OnItemClickListener  {
 	private static int decoding = 0;
 	private static int proxReady = 0;
 	private File sdCard;
+	
+	private boolean AutoSelectPanel_ = true;
+	
+	private static String pixelFirmware = "Not Connected";
+	private static String pixelBootloader = "Not Connected";
+	private static String pixelHardwareID = "Not Connected";
+	private static String IOIOLibVersion = "Not Connected";
+	
+	private static VersionType v;
 	
 
 	@Override
@@ -1476,10 +1483,14 @@ public static void playPairVideo() {
 	 	      	alert.setTitle(getResources().getString(R.string.setupInstructionsStringTitle)).setIcon(R.drawable.icon).setMessage(getResources().getString(R.string.setupInstructionsString)).setNeutralButton(getResources().getString(R.string.OKText), null).show();
 	 	   }
 	    	
-		  if (item.getItemId() == R.id.menu_about) {
+	      if (item.getItemId() == R.id.menu_about) {
 			  
 			    AlertDialog.Builder alert=new AlertDialog.Builder(this);
-		      	alert.setTitle(getString(R.string.menu_about_title)).setIcon(R.drawable.icon).setMessage(getString(R.string.menu_about_summary) + "\n\n" + getString(R.string.versionString) + " " + app_ver).setNeutralButton(getResources().getString(R.string.OKText), null).show();	
+		      	alert.setTitle(getString(R.string.menu_about_title)).setIcon(R.drawable.icon).setMessage(getString(R.string.menu_about_summary) + "\n\n" + getString(R.string.versionString) + " " + app_ver + "\n"
+		      			+ getString(R.string.FirmwareVersionString) + " " + pixelFirmware + "\n"
+		      			+ getString(R.string.HardwareVersionString) + " " + pixelHardwareID + "\n"
+		      			+ getString(R.string.BootloaderVersionString) + " " + pixelBootloader + "\n"
+		      			+ getString(R.string.LibraryVersionString) + " " + IOIOLibVersion).setNeutralButton(getResources().getString(R.string.OKText), null).show();	
 		   }
 	    	
 	    	if (item.getItemId() == R.id.menu_prefs)
@@ -1537,6 +1548,9 @@ public static void playPairVideo() {
 	  //   dimDuringSlideShow = prefs.getBoolean("pref_dimDuringSlideShow", true);
 	     
 	     showProx_ = prefs.getBoolean("pref_showProxValue", true);
+
+	     AutoSelectPanel_ = prefs.getBoolean("pref_AutoSelectPanel", true);
+	     
 	     //   dimDuringSlideShow = prefs.getBoolean("pref_dimDuringSlideShow", true);
 	        
 	        proxTimer1_ = Integer.valueOf(prefs.getString(   
@@ -1583,13 +1597,13 @@ public static void playPairVideo() {
 	     
 	     setProxRangeText("Proximity Trigger Range: Between " + proximityThresholdLower_ + " and " + proximityThresholdUpper_);
 	     
-	     if (matrix_model == 0 || matrix_model == 1) {
+	    /* if (matrix_model == 0 || matrix_model == 1) {
 	    	 currentResolution = 16;
 	     }
 	     else
 	     {
 	    	 currentResolution = 32;
-	     }
+	     }*/
 	     
 	     FPSOverride_ = Integer.valueOf(prefs.getString(   //the selected RGB LED Matrix Type
 	    	        resources.getString(R.string.fps_override),
@@ -1618,32 +1632,169 @@ public static void playPairVideo() {
 	    	 fps = 0;
 	     }
 	     
-	     switch (matrix_model) {  //get this from the preferences
-	     case 0:
-	    	 KIND = ioio.lib.api.RgbLedMatrix.Matrix.SEEEDSTUDIO_32x16;
-	    	 BitmapInputStream = getResources().openRawResource(R.raw.selectimage16);
-	    	 break;
-	     case 1:
-	    	 KIND = ioio.lib.api.RgbLedMatrix.Matrix.ADAFRUIT_32x16;
-	    	 BitmapInputStream = getResources().openRawResource(R.raw.selectimage16);
-	    	 break;
-	     case 2:
-	    	 KIND = ioio.lib.api.RgbLedMatrix.Matrix.SEEEDSTUDIO_32x32_NEW; //v1
-	    	 BitmapInputStream = getResources().openRawResource(R.raw.selectimage32);
-	    	 break;
-	     case 3:
-	    	 KIND = ioio.lib.api.RgbLedMatrix.Matrix.SEEEDSTUDIO_32x32; //v2
-	    	 BitmapInputStream = getResources().openRawResource(R.raw.selectimage32);
-	    	 break;
-	     default:	    		 
-	    	 KIND = ioio.lib.api.RgbLedMatrix.Matrix.SEEEDSTUDIO_32x32; //v2 as the default
-	    	 BitmapInputStream = getResources().openRawResource(R.raw.selectimage32);
-	     }
+	     if (AutoSelectPanel_ && pixelHardwareID.substring(0,4).equals("PIXL") && !pixelFirmware.substring(4,5).equals("0")) { // PIXL0008 or PIXL0009 is the normal so if it's just a 0 for the 5th character, then we don't go here
+		    	
+	    	 	//let's first check if we have a matching firmware to auto-select and if not, we'll just go what the matrix from preferences
+		  
+		  		if (pixelHardwareID.substring(4,5).equals("Q")) {
+	    	 		matrix_model = 11;
+	    	 		KIND = ioio.lib.api.RgbLedMatrix.Matrix.ADAFRUIT_32x32;
+			    	BitmapInputStream = getResources().openRawResource(R.raw.selectimage32);
+			    	currentResolution = 32; 
+	    	 	}
+	    	 	else if (pixelHardwareID.substring(4,5).equals("T")) {
+	    	 		matrix_model = 14;
+	    	 		KIND = ioio.lib.api.RgbLedMatrix.Matrix.ADAFRUIT_64x64;
+			    	BitmapInputStream = getResources().openRawResource(R.raw.select64by64);
+			    	currentResolution = 128; 
+	    	 	}
+	    	 	else if (pixelHardwareID.substring(4,5).equals("I")) {
+	    	 		matrix_model = 1; 
+	    	 		KIND = ioio.lib.api.RgbLedMatrix.Matrix.ADAFRUIT_32x16;
+			    	BitmapInputStream = getResources().openRawResource(R.raw.selectimage16);
+			    	currentResolution = 16;
+	    	 	}
+	    	 	else if (pixelHardwareID.substring(4,5).equals("L")) { //low power
+	    	 		matrix_model = 1; 
+	    	 		KIND = ioio.lib.api.RgbLedMatrix.Matrix.ADAFRUIT_32x16;
+			    	BitmapInputStream = getResources().openRawResource(R.raw.selectimage16);
+			    	currentResolution = 16;
+	    	 	}
+	    	 	else if (pixelHardwareID.substring(4,5).equals("C")) {
+	    	 		matrix_model = 12; 
+	    	 		KIND = ioio.lib.api.RgbLedMatrix.Matrix.ADAFRUIT_32x32_ColorSwap;
+			    	BitmapInputStream = getResources().openRawResource(R.raw.selectimage32);
+			    	currentResolution = 32; 
+	    	 	}
+	    	 	else if (pixelHardwareID.substring(4,5).equals("R")) {
+	    	 		matrix_model = 13; 
+	    	 		KIND = ioio.lib.api.RgbLedMatrix.Matrix.ADAFRUIT_64x32;
+			    	BitmapInputStream = getResources().openRawResource(R.raw.select64by32);
+			    	currentResolution = 64; 
+	    	 	}
+	    	 	else if (pixelHardwareID.substring(4,5).equals("M")) { //low power
+	    	 		 matrix_model = 3;
+	    	 		 KIND = ioio.lib.api.RgbLedMatrix.Matrix.SEEEDSTUDIO_32x32; //pixel v2
+			    	 BitmapInputStream = getResources().openRawResource(R.raw.selectimage32);
+			    	 currentResolution = 32;
+	    	 	}
+	    	 	else if (pixelHardwareID.substring(4,5).equals("N")) { //low power
+	    	 		 matrix_model = 11;
+	    	 		 KIND = ioio.lib.api.RgbLedMatrix.Matrix.ADAFRUIT_32x32; //pixel v2.5
+			    	 BitmapInputStream = getResources().openRawResource(R.raw.selectimage32);
+			    	 currentResolution = 32; 
+	    	 	}
+	    	 	else {  //in theory, we should never go here
+	    	 		KIND = ioio.lib.api.RgbLedMatrix.Matrix.ADAFRUIT_32x32;
+			    	BitmapInputStream = getResources().openRawResource(R.raw.selectimage32);
+			    	currentResolution = 32; 
+	    	 	}
+	  		}	
+	  
+	       else {
+		     switch (matrix_model) {  //get this from the preferences
+			     case 0:
+			    	 KIND = ioio.lib.api.RgbLedMatrix.Matrix.SEEEDSTUDIO_32x16;
+			    	 BitmapInputStream = getResources().openRawResource(R.raw.selectimage16);
+			    	 currentResolution = 16;
+			    	 break;
+			     case 1:
+			    	 KIND = ioio.lib.api.RgbLedMatrix.Matrix.ADAFRUIT_32x16;
+			    	 BitmapInputStream = getResources().openRawResource(R.raw.selectimage16);
+			    	 currentResolution = 16;
+			    	 break;
+			     case 2:
+			    	 KIND = ioio.lib.api.RgbLedMatrix.Matrix.SEEEDSTUDIO_32x32_NEW; //v1, this matrix was never used
+			    	 BitmapInputStream = getResources().openRawResource(R.raw.selectimage32);
+			    	 currentResolution = 32;
+			    	 break;
+			     case 3:
+			    	 KIND = ioio.lib.api.RgbLedMatrix.Matrix.SEEEDSTUDIO_32x32; //v2
+			    	 BitmapInputStream = getResources().openRawResource(R.raw.selectimage32);
+			    	 currentResolution = 32;
+			    	 break;
+			     case 4:
+			    	 KIND = ioio.lib.api.RgbLedMatrix.Matrix.SEEEDSTUDIO_64x32; 
+			    	 BitmapInputStream = getResources().openRawResource(R.raw.select64by32);
+			    	 currentResolution = 64; 
+			    	 break;
+			     case 5:
+			    	 KIND = ioio.lib.api.RgbLedMatrix.Matrix.SEEEDSTUDIO_32x64; 
+			    	 BitmapInputStream = getResources().openRawResource(R.raw.select32by64);
+			    	 currentResolution = 64; 
+			    	 break;	 
+			     case 6:
+			    	 KIND = ioio.lib.api.RgbLedMatrix.Matrix.SEEEDSTUDIO_2_MIRRORED; 
+			    	 BitmapInputStream = getResources().openRawResource(R.raw.select32by64);
+			    	 currentResolution = 64; 
+			    	 break;	 	 
+			     case 7: //this one doesn't work and we don't use it rigth now
+			    	 KIND = ioio.lib.api.RgbLedMatrix.Matrix.SEEEDSTUDIO_4_MIRRORED;
+			    	 BitmapInputStream = getResources().openRawResource(R.raw.select32by64);
+			    	 currentResolution = 128; //original 128
+			    	 break;
+			     case 8:
+			    	 KIND = ioio.lib.api.RgbLedMatrix.Matrix.SEEEDSTUDIO_128x32; //horizontal
+			    	 BitmapInputStream = getResources().openRawResource(R.raw.select128by32);
+			    	 currentResolution = 128;  
+			    	 break;	 
+			     case 9:
+			    	 KIND = ioio.lib.api.RgbLedMatrix.Matrix.SEEEDSTUDIO_32x128; //vertical mount
+			    	 BitmapInputStream = getResources().openRawResource(R.raw.select32by128);
+			    	 currentResolution = 128; 
+			    	 break;	 
+			     case 10:
+			    	 KIND = ioio.lib.api.RgbLedMatrix.Matrix.SEEEDSTUDIO_64x64;
+			    	 BitmapInputStream = getResources().openRawResource(R.raw.select64by64);
+			    	 currentResolution = 128; 
+			    	 break;
+			     case 11:
+			    	 KIND = ioio.lib.api.RgbLedMatrix.Matrix.ADAFRUIT_32x32;
+			    	 BitmapInputStream = getResources().openRawResource(R.raw.selectimage32);
+			    	 currentResolution = 32; 
+			    	 break;	 
+			     case 12:
+			    	 KIND = ioio.lib.api.RgbLedMatrix.Matrix.ADAFRUIT_32x32_ColorSwap;
+			    	 BitmapInputStream = getResources().openRawResource(R.raw.selectimage32);
+			    	 currentResolution = 32; 
+			    	 break;	 	 
+			     case 13:
+			    	 KIND = ioio.lib.api.RgbLedMatrix.Matrix.ADAFRUIT_64x32;
+			    	 BitmapInputStream = getResources().openRawResource(R.raw.select64by32);
+			    	 currentResolution = 64; 
+			    	 break;	
+			     case 14:
+			    	 KIND = ioio.lib.api.RgbLedMatrix.Matrix.ADAFRUIT_64x64;
+			    	 BitmapInputStream = getResources().openRawResource(R.raw.select64by64);
+			    	 currentResolution = 128; 
+			    	 break;
+			     case 15:
+			    	 KIND = ioio.lib.api.RgbLedMatrix.Matrix.ADAFRUIT_128x32;
+			    	 BitmapInputStream = getResources().openRawResource(R.raw.select128by32);
+			    	 currentResolution = 128; 
+			    	 break;	 	 	
+			     case 16:
+			    	 KIND = ioio.lib.api.RgbLedMatrix.Matrix.ADAFRUIT_32x128;
+			    	 BitmapInputStream = getResources().openRawResource(R.raw.select32by128);
+			    	 currentResolution = 128; 
+			    	 break;	 	 	
+			     default:	    		 
+			    	 KIND = ioio.lib.api.RgbLedMatrix.Matrix.SEEEDSTUDIO_32x32; //v2 as the default
+			    	 BitmapInputStream = getResources().openRawResource(R.raw.selectimage32);
+			    	 currentResolution = 32;
+			     }
+	    	 }
 	         
 	     frame_ = new short [KIND.width * KIND.height];
 		 BitmapBytes = new byte[KIND.width * KIND.height *2]; //512 * 2 = 1024 or 1024 * 2 = 2048
 		 
-		 loadRGB565(); //this function loads a raw RGB565 image to the matrix
+		 loadRGB565(); //load the select pic raw565 file
+	 }
+	    
+	    private void updatePrefs() //here is where we read the shared preferences into variables
+	    {
+	    	 SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);     
+	    	 setPreferences();
 	 }
 	
 	
@@ -1655,8 +1806,45 @@ public static void playPairVideo() {
 
   		@Override
   		protected void setup() throws ConnectionLostException {
-  			matrix_ = ioio_.openRgbLedMatrix(KIND);
-  			prox_ = ioio_.openAnalogInput(proximityPin_);		
+  			
+  			
+  		//**** let's get IOIO version info for the About Screen ****
+  			pixelFirmware = ioio_.getImplVersion(v.APP_FIRMWARE_VER);
+  			pixelBootloader = ioio_.getImplVersion(v.BOOTLOADER_VER);
+  			pixelHardwareID = ioio_.getImplVersion(v.HARDWARE_VER); 
+  			IOIOLibVersion = ioio_.getImplVersion(v.IOIOLIB_VER);
+  			
+  			
+  			//matrix_ = ioio_.openRgbLedMatrix(KIND);
+  			prox_ = ioio_.openAnalogInput(proximityPin_);	
+  			
+  			 if (AutoSelectPanel_ && pixelHardwareID.substring(0,4).equals("PIXL") && !pixelHardwareID.substring(4,5).equals("0")) { //only go here if we have a firmware that is set to auto-detect, otherwise we can skip this
+ 	  			runOnUiThread(new Runnable() 
+ 	  			{
+ 	  			   public void run() 
+ 	  			   {
+ 	  				  
+ 	  				   updatePrefs();
+ 	  				   
+ 	  				   try {
+ 	  					 matrix_ = ioio_.openRgbLedMatrix(KIND);
+ 	 	  	  		     matrix_.frame(frame_); //stream "select image" text to PIXEL
+ 					} catch (ConnectionLostException e) {
+ 						// TODO Auto-generated catch block
+ 						e.printStackTrace();
+ 					}
+ 	  			      
+ 	  			   }
+ 	  			}); 
+   			}
+   		   
+   		   else { //we didn't auto-detect so just go the normal way
+   			  matrix_ = ioio_.openRgbLedMatrix(KIND);
+   	  		  matrix_.frame(frame_); //stream "select image" text to PIXEL
+   		   }
+  			
+  			
+  			
   			deviceFound = 1; //if we went here, then we are connected over bluetooth or USB
   			connectTimer.cancel(); //we can stop this since it was found
   			
@@ -1672,40 +1860,7 @@ public static void playPairVideo() {
   			
   		}
 
-  		//@Override
-  		//public void loop() throws ConnectionLostException {
   		
-  			//try {
-  				
-  	  			//proxValue = prox_.read();
-  	  			//proxValue = proxValue * 1000;	
-  	  			//int proxInt = (int)proxValue;
-  	  			
-  	  		//	if (showProx_ == true) {
-  	  		//		setText(Integer.toString(proxInt));
-  	  		//	}
-  	  			
-  	  			
-	  	  	//if ((proxOn_ == true) && (Playing == 1 ) && (proxValue >= proximityThresholdLower_) && (proxValue <= proximityThresholdUpper_) && (proxTriggeredFlag == 0)) { //we're in range so let's trigger
-	  	  		//		proxTriggeredFlag = 1;
-	  	  		//		proxInteractive(); //let's now play the triggered prox animation
-	  	  	//}
-  	  		
-	  	  			
-  	  			//if (proxTriggeredFlag == 0) { //if we're in range
-	  				//proxTriggeredFlag = 1;
-	  				//loadProxImage2();
-	  			//}
-  	  			
-  	  			
-  					
-  			//		Thread.sleep(10);
-  				//} catch (InterruptedException e) {
-  				//	ioio_.disconnect();
-  			//	} catch (ConnectionLostException e) {
-  		//			throw e;
-  				//}
-  	//	}	
   		
   		@Override
 		public void disconnected() {   			
@@ -1848,19 +2003,6 @@ public static void playPairVideo() {
 		  					proxInteractiveGoBack();
 		  					
 		  				}
-	  				//}
-	  				
-	  				//else 
-	  				//{
-	  					//if (proxOutofRangeCounter > 3) {
-			  				//	proxOutofRangeCounter = 0;
-			  				//	proxVid2Playing = 0;
-			  				//	proxTriggeredFlag = 0;
-			  				//	proxInteractiveGoBack();
-	  					//}
-	  				//}
-	  				
-	  				
 	  			}
 	  		}
    		}
@@ -2241,7 +2383,7 @@ public static void playPairVideo() {
 						 	 	   		 matrix2 = new Matrix();
 						 	 	   		 // resize the bit map
 						 	 	   		 matrix2.postScale(scaleWidth, scaleHeight);
-						 	 	   		 resizedBitmap = Bitmap.createBitmap(bitmap, 0, 0, width_original, height_original, matrix2, true);
+						 	 	   		 resizedBitmap = Bitmap.createBitmap(bitmap, 0, 0, width_original, height_original, matrix2, false);
 						 	 	   		 IOIOBitmap = Bitmap.createBitmap(KIND.width, KIND.height, Config.RGB_565); 
 						 	 	   		 canvasIOIO = new Canvas(IOIOBitmap);
 						 	 	   		 canvasIOIO.drawRGB(0,0,0); //a black background
